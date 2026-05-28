@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const allowed = ['contact', 'property', 'operation', 'operations', 'webcontact', 'signed_operations'];
   if (!allowed.includes(endpoint)) return res.status(400).json({ error: 'Endpoint no permitido' });
   try {
-    const baseUrl = `https://www.tokkobroker.com/api/v1/${endpoint}/?key=${key}&format=json&limit=100`;
+    const baseUrl = `https://www.tokkobroker.com/api/v1/${endpoint}/?key=${key}&format=json&limit=20`;
     const url = endpoint === 'webcontact' 
       ? `${baseUrl}&ordering=-created_date`
       : `${baseUrl}&ordering=-created_at`;
