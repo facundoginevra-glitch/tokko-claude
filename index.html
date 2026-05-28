@@ -188,7 +188,7 @@ async function fetchTokko(query) {
   const needOp = q.includes('operaci') || q.includes('venta') || q.includes('alquiler') || q.includes('cerr') || q.includes('resumen') || q.includes('todo');
 
   const calls = [];
-  if (needContact || (!needProp && !needOp)) calls.push(['contacts', 'contact']);
+  if (needContact || (!needProp && !needOp)) calls.push(['contacts', 'webcontact']);
   if (needProp || (!needContact && !needOp)) calls.push(['properties', 'property']);
   if (needOp) calls.push(['operations', 'operation']);
 
