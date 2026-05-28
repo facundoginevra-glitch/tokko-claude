@@ -9,11 +9,13 @@ export default async function handler(req, res) {
   if (!allowed.includes(endpoint)) return res.status(400).json({ error: 'Endpoint no permitido' });
   try {
     const baseUrl = `https://www.tokkobroker.com/api/v1/${endpoint}/?key=${key}&format=json&limit=20`;
-    const url = endpoint === 'webcontact' 
+    const url = endpoint === 'webcontact'
       ? `${baseUrl}&ordering=-created_date`
       : `${baseUrl}&ordering=-created_at`;
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const fetchOpts = endpoint === 'webcontact'
-      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ created_date__gte: firstDay }) }
       : { method: 'GET' };
     const response = await fetch(url, fetchOpts);
     const data = await response.json();
