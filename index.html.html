@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tokko + Claude</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f0f0e; --surface: #1a1a18; --surface2: #242422;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
+    --text: #f0ede6; --muted: #888780; --accent: #c8a96e; --accent2: #e8c98e;
+    --danger: #e24b4a; --success: #1d9e75; --radius: 12px;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 1.25rem 2rem; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 1rem; background: var(--surface); }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--accent); }
+  .logo span { color: var(--text); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-left: auto; }
+  .status-dot.err { background: var(--danger); }
+  .status-label { font-size: 12px; color: var(--muted); }
+  .main { flex: 1; display: flex; height: calc(100vh - 60px); overflow: hidden; }
+  .sidebar { width: 260px; border-right: 0.5px solid var(--border); padding: 1.25rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; background: var(--surface); overflow-y: auto; }
+  .sidebar-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); padding: 0.5rem 0.5rem 0.25rem; margin-top: 0.5rem; }
+  .quick-btn { background: none; border: 0.5px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; text-align: left; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; line-height: 1.4; }
+  .quick-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--accent); }
+  .config-section { margin-top: auto; padding-top: 1rem; border-top: 0.5px solid var(--border); }
+  .config-label { font-size: 11px; color: var(--muted); margin-bottom: 0.3rem; display: block; }
+  .config-input { width: 100%; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 8px; padding: 0.45rem 0.75rem; color: var(--text); font-size: 12px; font-family: 'DM Sans', sans-serif; outline: none; margin-bottom: 0.5rem; }
+  .config-input:focus { border-color: var(--accent); }
+  .save-btn { width: 100%; background: var(--accent); color: #1a1a18; border: none; border-radius: 8px; padding: 0.5rem; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+  .save-btn:hover { opacity: 0.85; }
+  .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .messages { flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .welcome { text-align: center; padding: 3rem 2rem; }
+  .welcome h2 { font-family: 'DM Serif Display', serif; font-size: 2rem; color: var(--accent); margin-bottom: 0.75rem; }
+  .welcome p { color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 400px; margin: 0 auto; }
+  .msg { display: flex; gap: 1rem; align-items: flex-start; animation: fadeUp 0.3s ease; }
+  .msg.user { flex-direction: row-reverse; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .avatar.ai { background: var(--accent); color: #1a1a18; }
+  .avatar.user { background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); }
+  .bubble { max-width: 74%; padding: 0.85rem 1.1rem; border-radius: var(--radius); font-size: 14px; line-height: 1.7; }
+  .msg.ai .bubble { background: var(--surface2); border: 0.5px solid var(--border); color: var(--text); border-top-left-radius: 4px; }
+  .msg.user .bubble { background: var(--accent); color: #1a1a18; border-top-right-radius: 4px; font-weight: 500; }
+  .bubble strong { color: var(--accent2); }
+  .bubble table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 13px; }
+  .bubble th { text-align: left; padding: 6px 10px; background: rgba(200,169,110,0.12); color: var(--accent); font-weight: 500; border-bottom: 0.5px solid var(--border2); }
+  .bubble td { padding: 6px 10px; border-bottom: 0.5px solid var(--border); }
+  .bubble tr:last-child td { border-bottom: none; }
+  .thinking { display: flex; gap: 4px; align-items: center; padding: 0.25rem 0; }
+  .thinking span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite; }
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,80%,100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+  .input-bar { padding: 1rem 2rem; border-top: 0.5px solid var(--border); background: var(--surface); display: flex; gap: 0.75rem; align-items: flex-end; }
+  .input-wrap { flex: 1; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 12px; display: flex; align-items: flex-end; padding: 0.6rem 0.75rem; transition: border-color 0.15s; }
+  .input-wrap:focus-within { border-color: var(--accent); }
+  #userInput { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; resize: none; max-height: 120px; line-height: 1.5; }
+  #userInput::placeholder { color: var(--muted); }
+  #sendBtn { background: var(--accent); color: #1a1a18; border: none; border-radius: 8px; width: 38px; height: 38px; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  #sendBtn:hover { opacity: 0.85; }
+  #sendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .err-bubble { background: rgba(226,75,74,0.1); border: 0.5px solid rgba(226,75,74,0.3); border-radius: 8px; padding: 0.75rem 1rem; font-size: 13px; color: #f09595; line-height: 1.6; }
+  .info-box { background: rgba(200,169,110,0.08); border: 0.5px solid rgba(200,169,110,0.25); border-radius: 10px; padding: 1rem 1.25rem; font-size: 13px; color: var(--accent); line-height: 1.7; margin-top: 1.5rem; text-align: left; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Tokko<span> × Claude</span></div>
+  <span class="status-label" id="statusLabel">Listo</span>
+  <div class="status-dot" id="statusDot"></div>
+</header>
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-title">Consultas rápidas</div>
+    <button class="quick-btn" onclick="sendQuick('¿Cuántas consultas recibí este mes?')">📨 Consultas del mes</button>
+    <button class="quick-btn" onclick="sendQuick('¿Cuál es el portal con más consultas?')">🏆 Portal con más leads</button>
+    <button class="quick-btn" onclick="sendQuick('¿Qué propiedades recibieron más consultas?')">🏠 Propiedades más consultadas</button>
+    <button class="quick-btn" onclick="sendQuick('¿Cuántas propiedades ingresaron este mes?')">➕ Ingresos del mes</button>
+    <button class="quick-btn" onclick="sendQuick('¿Cuántas operaciones realicé este mes?')">✅ Operaciones</button>
+    <button class="quick-btn" onclick="sendQuick('Ayudame a tasar una propiedad. Preguntame los datos necesarios.')">💰 Tasación asistida</button>
+    <button class="quick-btn" onclick="sendQuick('Dame un resumen general de mi cartera este mes')">📊 Resumen del mes</button>
+    <button class="quick-btn" onclick="sendQuick('¿Cuántas propiedades tengo publicadas actualmente?')">📋 Stock publicado</button>
+    <div class="config-section">
+      <label class="config-label">API Key de Tokko</label>
+      <input class="config-input" type="password" id="tokkoKey" placeholder="Tu API key de Tokko..." />
+      <button class="save-btn" onclick="saveConfig()">💾 Guardar</button>
+    </div>
+  </div>
+  <div class="chat-area">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcomeMsg">
+        <h2>Hola, ¿en qué te ayudo?</h2>
+        <p>Soy tu asistente inmobiliario. Consultá tus datos de Tokko en tiempo real.</p>
+        <div class="info-box">
+          ✅ App lista. Hacé una consulta usando los botones del panel izquierdo.
+        </div>
+      </div>
+    </div>
+    <div class="input-bar">
+      <div class="input-wrap">
+        <textarea id="userInput" rows="1" placeholder="Preguntame sobre consultas, propiedades, operaciones..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      </div>
+      <button id="sendBtn" onclick="sendMessage()">↑</button>
+    </div>
+  </div>
+</div>
+<script>
+const TOKKO_DEFAULT = 'fad0d191d200804e836be0b26626ac919fa37e8a';
+let tokkoKey = localStorage.getItem('tokkoKey') || TOKKO_DEFAULT;
+let chatHistory = [];
+let busy = false;
+
+document.getElementById('tokkoKey').value = tokkoKey;
+
+function saveConfig() {
+  tokkoKey = document.getElementById('tokkoKey').value.trim();
+  localStorage.setItem('tokkoKey', tokkoKey);
+  setStatus('✓ Guardado', false);
+  setTimeout(() => setStatus('Listo', false), 2000);
+}
+
+function setStatus(txt, isErr) {
+  document.getElementById('statusLabel').textContent = txt;
+  document.getElementById('statusDot').className = 'status-dot' + (isErr ? ' err' : '');
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function removeWelcome() {
+  const w = document.getElementById('welcomeMsg');
+  if (w) w.remove();
+}
+
+function addMsg(role, content, isHTML) {
+  removeWelcome();
+  const wrap = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'avatar ' + role;
+  av.textContent = role === 'ai' ? 'IA' : 'Vos';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  if (isHTML) bub.innerHTML = content; else bub.textContent = content;
+  div.appendChild(av); div.appendChild(bub);
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function addThinking() {
+  removeWelcome();
+  const wrap = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ai'; div.id = 'thinking';
+  const av = document.createElement('div');
+  av.className = 'avatar ai'; av.textContent = 'IA';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  bub.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
+  div.appendChild(av); div.appendChild(bub);
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function removeThinking() {
+  const t = document.getElementById('thinking');
+  if (t) t.remove();
+}
+
+async function fetchTokko(query) {
+  const q = query.toLowerCase();
+  const res = {};
+  const needContact = q.includes('consulta') || q.includes('portal') || q.includes('lead') || q.includes('resumen') || q.includes('todo');
+  const needProp = q.includes('propiedad') || q.includes('stock') || q.includes('ingres') || q.includes('publicad') || q.includes('tasar') || q.includes('tasaci') || q.includes('resumen') || q.includes('todo');
+  const needOp = q.includes('operaci') || q.includes('venta') || q.includes('alquiler') || q.includes('cerr') || q.includes('resumen') || q.includes('todo');
+
+  const calls = [];
+  if (needContact || (!needProp && !needOp)) calls.push(['contacts', 'contact']);
+  if (needProp || (!needContact && !needOp)) calls.push(['properties', 'property']);
+  if (needOp) calls.push(['operations', 'operation']);
+
+  await Promise.all(calls.map(async ([name, endpoint]) => {
+    try {
+      const r = await fetch(`/api/tokko?endpoint=${endpoint}&key=${tokkoKey}`);
+      if (r.ok) res[name] = await r.json();
+      else res[name+'_error'] = 'HTTP ' + r.status;
+    } catch(e) {
+      res[name+'_error'] = e.message;
+    }
+  }));
+  return res;
+}
+
+function buildSystem(data) {
+  const hoy = new Date();
+  return `Sos un asistente inmobiliario experto con Tokko Broker.
+Fecha actual: ${hoy.toLocaleDateString('es-AR')} — ${hoy.toLocaleString('es-AR',{month:'long',year:'numeric'})}.
+DATOS REALES DE TOKKO: ${JSON.stringify(data, null, 2)}
+INSTRUCCIONES:
+- Respondé con datos reales y concretos del JSON
+- Calculá métricas del mes actual filtrando por fecha
+- Para portales: mirá el campo "source" en contactos
+- Para tasaciones: pedí zona, m2, ambientes, estado y compará con el portfolio
+- Usá **negritas** para números clave
+- Respondé en español argentino, profesional y amigable`;
+}
+
+async function callClaude(msg, tokkoData) {
+  chatHistory.push({ role: 'user', content: msg });
+  const r = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      system: buildSystem(tokkoData),
+      messages: chatHistory
+    })
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.error?.message || e.error || 'Error: ' + r.status);
+  }
+  const d = await r.json();
+  const reply = d.content?.find(b => b.type === 'text')?.text || 'Sin respuesta';
+  chatHistory.push({ role: 'assistant', content: reply });
+  return reply;
+}
+
+function fmt(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/\n\n/g,'</p><p style="margin-top:0.6rem">')
+    .replace(/\n/g,'<br>');
+}
+
+async function sendMessage() {
+  if (busy) return;
+  const inp = document.getElementById('userInput');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  inp.value = ''; inp.style.height = 'auto';
+  busy = true;
+  document.getElementById('sendBtn').disabled = true;
+  addMsg('user', txt, false);
+  addThinking();
+  try {
+    setStatus('Consultando Tokko...', false);
+    const data = await fetchTokko(txt);
+    setStatus('Analizando con Claude...', false);
+    const reply = await callClaude(txt, data);
+    removeThinking();
+    addMsg('ai', `<p>${fmt(reply)}</p>`, true);
+    setStatus('Listo', false);
+  } catch(e) {
+    removeThinking();
+    addMsg('ai', `<div class="err-bubble">❌ ${e.message}</div>`, true);
+    setStatus('Error', true);
+  }
+  busy = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function sendQuick(t) {
+  document.getElementById('userInput').value = t;
+  sendMessage();
+}
+</script>
+</body>
+</html>
