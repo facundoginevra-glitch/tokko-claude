@@ -12,9 +12,11 @@ export default async function handler(req, res) {
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const today = now.toISOString().split('T')[0];
     const url = endpoint === 'webcontact'
-      ? `https://www.tokkobroker.com/api/v1/webcontact/?key=${key}&format=json&limit=20&date_from=${firstDay}&date_to=${today}`
+      ? `https://www.tokkobroker.com/api/v1/webcontact/?key=${key}&format=json&limit=20`
       : `https://www.tokkobroker.com/api/v1/${endpoint}/?key=${key}&format=json&limit=20&ordering=-created_at`;
-    const fetchOpts = { method: 'GET' };
+    const fetchOpts = endpoint === 'webcontact'
+      ? { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `date_from=${firstDay}&date_to=${today}` }
+      : { method: 'GET' };
     const response = await fetch(url, fetchOpts);
     const text = await response.text();
     try {
