@@ -11,10 +11,9 @@ export default async function handler(req, res) {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const today = now.toISOString().split('T')[0];
-    const baseUrl = `https://www.tokkobroker.com/api/v1/${endpoint}/?key=${key}&format=json&limit=20`;
     const url = endpoint === 'webcontact'
-      ? baseUrl
-      : `${baseUrl}&ordering=-created_at`;
+      ? `https://www.tokkobroker.com/api/v1/webcontact/?key=${key}&format=json`
+      : `https://www.tokkobroker.com/api/v1/${endpoint}/?key=${key}&format=json&limit=20&ordering=-created_at`;
     const fetchOpts = endpoint === 'webcontact'
       ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_from: firstDay, date_to: today }) }
       : { method: 'GET' };
@@ -22,9 +21,9 @@ export default async function handler(req, res) {
     const text = await response.text();
     try {
       const data = JSON.parse(text);
-      return res.status(200).json(data);
+      return res.status(response.status).json(data);
     } catch(e) {
-      return res.status(500).json({ error: text });
+      return res.status(response.status || 500).json({ tokko_status: response.status, error: text.slice(0, 1000) });
     }
   } catch(e) {
     return res.status(500).json({ error: e.message });
