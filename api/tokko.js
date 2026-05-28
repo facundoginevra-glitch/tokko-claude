@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const today = now.toISOString().split('T')[0];
     const baseUrl = `https://www.tokkobroker.com/api/v1/${endpoint}/?key=${key}&format=json&limit=20`;
     const url = endpoint === 'webcontact'
-      ? `${baseUrl}&ordering=-created_at`
+      ? baseUrl
       : `${baseUrl}&ordering=-created_at`;
     const fetchOpts = endpoint === 'webcontact'
       ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_from: firstDay, date_to: today }) }
